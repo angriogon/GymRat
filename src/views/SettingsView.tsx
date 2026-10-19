@@ -103,13 +103,25 @@ export function SettingsView({ store }: { store: Store }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState('');
 
-  const exportData = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  // En iPhone se abre la hoja de Compartir (Guardar en Archivos, iCloud, AirDrop…);
+  // si el navegador no permite compartir archivos, se descarga directamente.
+  const exportData = async () => {
+    const name = `gymrat-backup-${today()}.json`;
+    const json = JSON.stringify(data, null, 2);
+    const file = new File([json], name, { type: 'application/json' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Copia de seguridad GymRat' });
+        return;
+      } catch (e) {
+        if ((e as DOMException).name === 'AbortError') return; // el usuario cerró la hoja
+      }
+    }
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `gymrat-backup-${today()}.json`;
+    a.href = URL.createObjectURL(file);
+    a.download = name;
     a.click();
-    URL.revokeObjectURL(a.href);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
   const importData = async (file: File) => {
@@ -172,14 +184,15 @@ export function SettingsView({ store }: { store: Store }) {
       <section className="card pad">
         <h2 className="card-title">Datos</h2>
         <p className="muted small">
-          Los datos se guardan solo en este navegador. Exporta una copia de seguridad de vez en cuando o para pasarlos a otro dispositivo.
+          Los datos se guardan solo en este iPhone. Exporta una copia de vez en cuando (por ejemplo a iCloud Drive): es lo que te
+          permite recuperarlos si cambias de móvil o borras la app.
         </p>
         <div className="btn-row">
           <button className="btn outline" onClick={exportData}>
-            Exportar JSON
+            Exportar copia
           </button>
           <button className="btn outline" onClick={() => fileRef.current?.click()}>
-            Importar JSON
+            Restaurar copia
           </button>
           <button
             className="btn ghost danger"

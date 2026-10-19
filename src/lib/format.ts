@@ -9,18 +9,6 @@ export function formatDuration(sec: number): string {
   return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-/** Acepta "45", "45:30", "1:05:00". Un número solo se interpreta como minutos. */
-export function parseDuration(input: string): number | null {
-  const t = input.trim();
-  if (!t) return 0;
-  if (!/^\d+(:\d{1,2}){0,2}$/.test(t)) return null;
-  const parts = t.split(':').map(Number);
-  if (parts.slice(1).some((p) => p >= 60)) return null;
-  if (parts.length === 1) return parts[0] * 60;
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  return parts[0] * 3600 + parts[1] * 60 + parts[2];
-}
-
 /** Ritmo en min/km. */
 export function formatPace(distanceKm: number, durationSec: number): string {
   if (!distanceKm || !durationSec) return '—';

@@ -4,6 +4,7 @@ import { formatKm } from '../lib/format';
 import { sortByDate, streakWeeks, weekSummary } from '../lib/stats';
 import { WorkoutCard } from '../components/WorkoutCard';
 import { Icon } from '../components/Icon';
+import { InstallTip } from '../components/InstallTip';
 
 interface Props {
   data: AppData;
@@ -43,7 +44,14 @@ export function TodayView({ data, onOpen, onComplete, onNew }: Props) {
       <header className="view-head">
         <p className="muted">{formatLong(t)}</p>
         <h1>Esta semana</h1>
+        {streak > 0 && (
+          <p className="muted small">
+            🔥 Racha: {streak === 1 ? '1 semana entrenando' : `${streak} semanas seguidas entrenando`}
+          </p>
+        )}
       </header>
+
+      <InstallTip />
 
       <div className="stats-grid">
         <Progress
@@ -58,13 +66,6 @@ export function TodayView({ data, onOpen, onComplete, onNew }: Props) {
           goal={weeklyGymGoal}
           text={`${week.gymCount} / ${weeklyGymGoal} sesiones`}
         />
-        <div className="card stat">
-          <span className="stat-label">Racha</span>
-          <span className="stat-value">
-            {streak} {streak === 1 ? 'semana' : 'semanas'}
-          </span>
-          <span className="muted small">con al menos una sesión</span>
-        </div>
       </div>
 
       <section>
@@ -76,14 +77,14 @@ export function TodayView({ data, onOpen, onComplete, onNew }: Props) {
             ))}
           </div>
         ) : (
-          <p className="muted empty">Nada planificado para hoy.</p>
+          <p className="muted empty">Nada planificado para hoy. ¿Has entrenado? Regístralo:</p>
         )}
         <div className="quick-add">
           <button className="btn run-btn" onClick={() => onNew('run', t)}>
-            <Icon name="run" /> Registrar carrera
+            <Icon name="run" /> Carrera
           </button>
           <button className="btn gym-btn" onClick={() => onNew('gym', t)}>
-            <Icon name="gym" /> Registrar gym
+            <Icon name="gym" /> Gimnasio
           </button>
         </div>
       </section>

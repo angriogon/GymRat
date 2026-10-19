@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Kind, Routine, RunType, Status, Workout } from '../lib/types';
 import { RUN_TYPES } from '../lib/types';
-import { formatDuration, formatPace, parseDuration, uid } from '../lib/format';
+import { formatPace, uid } from '../lib/format';
 import { today } from '../lib/dates';
 import { Sheet } from './Sheet';
 import { Icon } from './Icon';
@@ -51,7 +51,13 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
   const [date, setDate] = useState(workout.date);
   const [runType, setRunType] = useState<RunType>(workout.run?.runType ?? 'rodaje');
   const [distance, setDistance] = useState(str(workout.run?.distanceKm));
-  const [duration, setDuration] = useState(workout.run?.durationSec ? formatDuration(workout.run.durationSec) : '');
+  // Duración en tres casillas numéricas: el teclado numérico de iOS no tiene ":".
+  const initSec = workout.run?.durationSec ?? 0;
+  const [dur, setDur] = useState({
+    h: initSec >= 3600 ? String(Math.floor(initSec / 3600)) : '',
+    m: initSec ? String(Math.floor((initSec % 3600) / 60)) : '',
+    s: initSec % 60 ? String(initSec % 60) : '',
+  });
   const [routineName, setRoutineName] = useState(workout.gym?.routineName ?? '');
   const [exercises, setExercises] = useState<ExerciseForm[]>(
     (workout.gym?.exercises ?? []).map((e) => ({
@@ -64,7 +70,11 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
   const [notes, setNotes] = useState(workout.notes ?? '');
   const [error, setError] = useState('');
 
-  const durationSec = parseDuration(duration);
+  const durParts = [dur.h, dur.m, dur.s].map((v) => (v.trim() ? Number(v) : 0));
+  const durationSec =
+    durParts.every((n) => Number.isInteger(n) && n >= 0) && durParts[1] < 60 && durParts[2] < 60
+      ? durParts[0] * 3600 + durParts[1] * 60 + durParts[2]
+      : null;
   const pace = useMemo(
     () => (durationSec ? formatPace(num(distance), durationSec) : '—'),
     [distance, durationSec],
@@ -89,7 +99,7 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
   const save = () => {
     if (!date) return setError('Indica una fecha.');
     if (kind === 'run') {
-      if (durationSec === null) return setError('Duración no válida. Usa minutos (45), mm:ss o h:mm:ss.');
+      if (durationSec === null) return setError('Duración no válida: los minutos y segundos deben estar entre 0 y 59.');
       if (status === 'done' && !num(distance)) return setError('Indica la distancia recorrida.');
     }
     const result: Workout = {
@@ -188,16 +198,32 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
                 onChange={(e) => setDistance(e.target.value)}
               />
             </label>
-            <label className="field">
+          </div>
+          <div className="row">
+            <div className="field">
               <span>Duración{status === 'planned' && ' · objetivo'}</span>
-              <input
-                inputMode="numeric"
-                placeholder="mm:ss"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                aria-invalid={durationSec === null}
-              />
-            </label>
+              <div className="duration" aria-invalid={durationSec === null}>
+                {(
+                  [
+                    ['h', 'h'],
+                    ['m', 'min'],
+                    ['s', 's'],
+                  ] as const
+                ).map(([k, unit]) => (
+                  <label key={k}>
+                    <input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="0"
+                      aria-label={unit === 'h' ? 'Horas' : unit === 'min' ? 'Minutos' : 'Segundos'}
+                      value={dur[k]}
+                      onChange={(e) => setDur((d) => ({ ...d, [k]: e.target.value.replace(/\D/g, '').slice(0, 2) }))}
+                    />
+                    <span>{unit}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
           <p className="muted small">
             Ritmo: <strong>{pace}</strong>
