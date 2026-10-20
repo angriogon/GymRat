@@ -4,6 +4,7 @@ import type { Store } from '../lib/store';
 import { emptyData, parseData } from '../lib/store';
 import { uid } from '../lib/format';
 import { today } from '../lib/dates';
+import { weekTargets } from '../lib/recommend';
 import { Sheet } from '../components/Sheet';
 import { Icon } from '../components/Icon';
 
@@ -160,6 +161,38 @@ export function SettingsView({ store }: { store: Store }) {
             <input inputMode="numeric" defaultValue={data.settings.weeklyGymGoal} onBlur={(e) => setGoal('weeklyGymGoal', e.target.value)} />
           </label>
         </div>
+        <div className="field">
+          <span>Días de entrenamiento</span>
+          <div className="chips days-pick">
+            {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((label, i) => {
+              const on = data.settings.trainDays.includes(i);
+              return (
+                <button
+                  key={i}
+                  className={`chip ${on ? 'on' : ''}`}
+                  aria-pressed={on}
+                  onClick={() =>
+                    store.updateSettings({
+                      trainDays: on ? data.settings.trainDays.filter((d) => d !== i) : [...data.settings.trainDays, i].sort(),
+                    })
+                  }
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <p className="muted small">
+          {(() => {
+            const tg = weekTargets(data);
+            const n = data.settings.trainDays.length;
+            if (!n) return 'Elige al menos un día para recibir sugerencias.';
+            return `Con ${n} ${n === 1 ? 'día' : 'días'} y tu objetivo de gym, las sugerencias reparten ${tg.gym} de gym y ${tg.run} ${
+              tg.run === 1 ? 'carrera' : 'carreras'
+            } por semana. La fuerza va primero; los demás días son para correr.`;
+          })()}
+        </p>
       </section>
 
       <section className="card pad">

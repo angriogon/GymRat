@@ -32,7 +32,7 @@ export function emptyData(): AppData {
     version: 1,
     workouts: [],
     routines: DEFAULT_ROUTINES,
-    settings: { weeklyKmGoal: 20, weeklyGymGoal: 3 },
+    settings: { weeklyKmGoal: 20, weeklyGymGoal: 3, trainDays: [0, 1, 3, 4, 5] },
   };
 }
 

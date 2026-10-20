@@ -54,7 +54,7 @@ export default function App() {
   const create = (kind: Kind, date: string) =>
     setEditor({ workout: newWorkout(kind, date, date > today() ? 'planned' : 'done'), isNew: true });
 
-  const viewProps = { data, onOpen: open, onComplete: complete, onNew: create };
+  const viewProps = { data, onOpen: open, onComplete: complete, onNew: create, onAdd: store.saveWorkout };
 
   return (
     <div className="app">

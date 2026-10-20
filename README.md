@@ -15,6 +15,7 @@ Por qué importa: los datos que se guardan desde Safari y los de la app instalad
 ## Funcionalidades
 
 - **Hoy**: progreso semanal frente a tus objetivos (km y sesiones de gym), racha de semanas activas, sesiones del día, pendientes sin completar y próximas sesiones.
+- **Sugerencias**: en *Hoy* propone la sesión del día (gym, carrera o descanso) según lo que llevas en la semana, qué hiciste ayer, el esfuerzo percibido y los días seguidos entrenando. En *Plan* rellena la semana con un botón: alterna fuerza y carrera, rota tus rutinas y reparte los km del objetivo (tirada larga al final). Nunca pisa lo ya planificado. El reparto sale de tus objetivos y tus días de entrenamiento (Ajustes).
 - **Plan**: vista semanal (lunes a domingo) para planificar sesiones, navegar entre semanas y copiar la semana anterior como plan.
 - **Registro de running**: tipo (rodaje, series, tempo, tirada larga, competición), distancia, duración, ritmo calculado automáticamente, RPE y notas.
 - **Registro de gimnasio**: ejercicios con series, repeticiones y peso; carga de rutinas plantilla y autocompletado de ejercicios.

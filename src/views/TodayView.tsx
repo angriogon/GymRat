@@ -5,12 +5,15 @@ import { sortByDate, streakWeeks, weekSummary } from '../lib/stats';
 import { WorkoutCard } from '../components/WorkoutCard';
 import { Icon } from '../components/Icon';
 import { InstallTip } from '../components/InstallTip';
+import { suggestToday } from '../lib/recommend';
+import { workoutDetail } from '../components/WorkoutCard';
 
 interface Props {
   data: AppData;
   onOpen: (w: Workout) => void;
   onComplete: (w: Workout) => void;
   onNew: (kind: Kind, date: string) => void;
+  onAdd: (w: Workout) => void;
 }
 
 function Progress({ label, value, goal, text }: { label: string; value: number; goal: number; text: string }) {
@@ -26,12 +29,13 @@ function Progress({ label, value, goal, text }: { label: string; value: number; 
   );
 }
 
-export function TodayView({ data, onOpen, onComplete, onNew }: Props) {
+export function TodayView({ data, onOpen, onComplete, onNew, onAdd }: Props) {
   const t = today();
   const week = weekSummary(data.workouts, weekStart(t));
   const { weeklyKmGoal, weeklyGymGoal } = data.settings;
   const streak = streakWeeks(data.workouts, t);
 
+  const suggestion = suggestToday(data, t);
   const todays = sortByDate(data.workouts.filter((w) => w.date === t));
   const upcoming = sortByDate(data.workouts.filter((w) => w.status === 'planned' && w.date > t)).slice(0, 5);
   const overdue = sortByDate(
@@ -75,6 +79,23 @@ export function TodayView({ data, onOpen, onComplete, onNew }: Props) {
             {todays.map((w) => (
               <WorkoutCard key={w.id} workout={w} onOpen={onOpen} onComplete={onComplete} />
             ))}
+          </div>
+        ) : suggestion ? (
+          <div className={`card suggestion ${suggestion.kind}`}>
+            <span className="kind-badge" aria-hidden="true">
+              <Icon name={suggestion.kind === 'run' ? 'run' : suggestion.kind === 'gym' ? 'gym' : 'moon'} />
+            </span>
+            <div className="suggestion-text">
+              <span className="stat-label">Sugerencia para hoy</span>
+              <strong>{suggestion.title}</strong>
+              {suggestion.workout?.kind === 'gym' && <span className="muted small">{workoutDetail(suggestion.workout)}</span>}
+              <span className="muted small">{suggestion.reason}</span>
+              {suggestion.workout && (
+                <button className="btn primary small" onClick={() => onAdd(suggestion.workout!)}>
+                  <Icon name="plus" size={16} /> Añadir a hoy
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <p className="muted empty">Nada planificado para hoy. ¿Has entrenado? Regístralo:</p>

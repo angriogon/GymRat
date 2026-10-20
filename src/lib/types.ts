@@ -52,6 +52,7 @@ export interface Routine {
 export interface Settings {
   weeklyKmGoal: number;
   weeklyGymGoal: number;
+  trainDays: number[]; // días de entrenamiento: 0 = lunes … 6 = domingo
 }
 
 export interface AppData {

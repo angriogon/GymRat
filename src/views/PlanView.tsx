@@ -3,7 +3,8 @@ import type { AppData, Kind, Workout } from '../lib/types';
 import { addDays, formatDow, formatShort, today, weekDays, weekStart } from '../lib/dates';
 import { formatKm, uid } from '../lib/format';
 import { sortByDate } from '../lib/stats';
-import { WorkoutCard } from '../components/WorkoutCard';
+import { WorkoutCard, workoutDetail, workoutTitle } from '../components/WorkoutCard';
+import { suggestWeekPlan, weekTargets } from '../lib/recommend';
 import { Icon } from '../components/Icon';
 
 interface Props {
@@ -47,6 +48,21 @@ export function PlanView({ data, onOpen, onComplete, onNew, onSaveMany }: Props)
     );
   };
 
+  // Rellena los días de entrenamiento libres desde hoy; nunca toca lo ya planificado o hecho.
+  const suggestPlan = () => {
+    const proposal = suggestWeekPlan(data, start, t);
+    if (!proposal.length) {
+      const tg = weekTargets(data);
+      return alert(
+        end < t
+          ? 'Esta semana ya ha pasado.'
+          : `No hay nada que añadir: la semana ya cubre tus ${tg.gym} sesiones de gym y ${tg.run} carreras, o no quedan días de entrenamiento libres. Puedes cambiar tus días en Ajustes.`,
+      );
+    }
+    const lines = proposal.map((w) => `${formatDow(w.date)}: ${workoutTitle(w)} (${workoutDetail(w)})`).join('\n');
+    if (confirm(`Plan sugerido:\n\n${lines}\n\n¿Añadirlo a la semana?`)) onSaveMany(proposal);
+  };
+
   return (
     <div className="view">
       <header className="view-head">
@@ -69,6 +85,11 @@ export function PlanView({ data, onOpen, onComplete, onNew, onSaveMany }: Props)
             Copiar semana anterior
           </button>
         </p>
+        {end >= t && (
+          <button className="btn outline full" onClick={suggestPlan}>
+            <Icon name="spark" size={18} /> Sugerir plan para esta semana
+          </button>
+        )}
       </header>
 
       <div className="days">
