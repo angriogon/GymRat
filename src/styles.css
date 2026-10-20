@@ -1044,3 +1044,25 @@ input[aria-invalid='true'] {
 .tabbar button span {
   white-space: nowrap;
 }
+
+.split-day {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.split-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+}
+
+.chip.small-chip {
+  min-height: 30px;
+  font-size: 0.8rem;
+  padding: 0 10px;
+}

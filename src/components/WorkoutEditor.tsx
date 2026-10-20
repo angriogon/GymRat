@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { Kind, Library, Routine, RunType, Status, Workout } from '../lib/types';
-import { RUN_CATEGORY_TYPE, STRENGTH_CATEGORIES } from '../lib/library';
+import type { Kind, Library, RunType, Status, StrengthCategory, Workout } from '../lib/types';
+import { RUN_CATEGORY_TYPE, splitLabel } from '../lib/library';
 import { ExercisePicker, RunPicker } from './LibraryPickers';
 import { RUN_TYPES } from '../lib/types';
 import { formatPace, uid } from '../lib/format';
@@ -21,7 +21,6 @@ interface ExerciseForm {
 interface Props {
   workout: Workout;
   isNew: boolean;
-  routines: Routine[];
   exerciseNames: string[];
   library: Library;
   lastWeight: (exerciseName: string) => number;
@@ -49,7 +48,7 @@ export function newWorkout(kind: Kind, date = today(), status: Status = 'done'):
   };
 }
 
-export function WorkoutEditor({ workout, isNew, routines, exerciseNames, library, lastWeight, onSave, onDelete, onClose }: Props) {
+export function WorkoutEditor({ workout, isNew, exerciseNames, library, lastWeight, onSave, onDelete, onClose }: Props) {
   const [kind, setKind] = useState<Kind>(workout.kind);
   const [status, setStatus] = useState<Status>(workout.status);
   const [date, setDate] = useState(workout.date);
@@ -66,6 +65,7 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, library
   const [session, setSession] = useState(workout.run?.session ?? '');
   const [picker, setPicker] = useState(false);
   const [routineName, setRoutineName] = useState(workout.gym?.routineName ?? '');
+  const [categories, setCategories] = useState<StrengthCategory[]>(workout.gym?.categories ?? []);
   const [exercises, setExercises] = useState<ExerciseForm[]>(
     (workout.gym?.exercises ?? []).map((e) => ({
       key: uid(),
@@ -87,20 +87,7 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, library
     [distance, durationSec],
   );
 
-  const loadRoutine = (id: string) => {
-    const r = routines.find((x) => x.id === id);
-    if (!r) return;
-    setRoutineName(r.name);
-    setExercises(
-      r.exercises.map((e) => ({
-        key: uid(),
-        name: e.name,
-        sets: Array.from({ length: Math.max(1, e.sets) }, () => ({ reps: str(e.reps), weight: '' })),
-      })),
-    );
-  };
-
-  const addFromLibrary = (items: Library['exercises'], cats: (keyof typeof STRENGTH_CATEGORIES)[]) => {
+  const addFromLibrary = (items: Library['exercises'], cats: StrengthCategory[]) => {
     setExercises((list) => [
       ...list,
       ...items.map((e) => {
@@ -113,7 +100,10 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, library
         };
       }),
     ]);
-    if (!routineName.trim()) setRoutineName(cats.map((c) => STRENGTH_CATEGORIES[c]).join(' + '));
+    const merged = [...categories, ...cats.filter((c) => !categories.includes(c))];
+    setCategories(merged);
+    // El nombre sigue a los grupos mientras no lo hayas escrito tú.
+    if (!routineName.trim() || routineName === splitLabel(categories)) setRoutineName(splitLabel(merged));
     setPicker(false);
   };
 
@@ -154,6 +144,7 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, library
     } else {
       result.gym = {
         routineName: routineName.trim(),
+        categories: categories.length ? categories : undefined,
         exercises: exercises
           .filter((e) => e.name.trim())
           .map((e) => ({
@@ -291,22 +282,9 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, library
         <>
           <div className="row">
             <label className="field grow">
-              <span>Rutina / nombre</span>
-              <input placeholder="Pierna, Torso…" value={routineName} onChange={(e) => setRoutineName(e.target.value)} />
+              <span>Nombre de la sesión</span>
+              <input placeholder="Pecho + Tríceps…" value={routineName} onChange={(e) => setRoutineName(e.target.value)} />
             </label>
-            {routines.length > 0 && (
-              <label className="field">
-                <span>Cargar plantilla</span>
-                <select value="" onChange={(e) => loadRoutine(e.target.value)}>
-                  <option value="">Elegir…</option>
-                  {routines.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
           </div>
 
           <datalist id="exercise-names">

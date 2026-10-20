@@ -1,18 +1,21 @@
-import type { AppData, Kind, Routine, RunType, Workout } from './types';
-import { RUN_TYPES } from './types';
+import type { AppData, Kind, RunCategory, RunTemplate, StrengthCategory, Workout } from './types';
 import { addDays, fromISO, weekDays, weekStart } from './dates';
 import { formatKm, uid } from './format';
-import { isDone, sortByDate } from './stats';
+import { exerciseHistory, isDone, sortByDate } from './stats';
+import { EXERCISES_PER_SESSION, RUN_CATEGORIES, RUN_CATEGORY_TYPE, splitLabel } from './library';
 
 /**
- * Recomendaciones basadas en reglas, sin servicios externos:
- * - El reparto gym/running sale de los objetivos semanales y los días de entrenamiento.
+ * Recomendaciones basadas en reglas y en la biblioteca, sin servicios externos:
+ * - El reparto gym/running sale del objetivo de gym y los días de entrenamiento.
  * - Se alterna gym y carrera para no encadenar dos días de fuerza.
- * - Las rutinas rotan a partir de la última realizada.
+ * - Los días de gym rotan según Ajustes (p. ej. Pecho + Tríceps → Espalda + bíceps…); los ejercicios
+ *   salen de la biblioteca: el principal de cada grupo siempre y el resto rota cada semana.
+ * - Carreras: la última de la semana es tirada larga; las demás alternan series y fartlek.
  * - Se recomienda descanso tras un día duro (RPE ≥ 8) o tras 3 días seguidos.
  */
 
 const dow = (iso: string) => (fromISO(iso).getDay() + 6) % 7; // 0 = lunes
+const weekNumber = (iso: string) => Math.round(fromISO(weekStart(iso)).getTime() / (7 * 86400000));
 
 export interface WeekTargets {
   gym: number;
@@ -26,32 +29,51 @@ export function weekTargets(data: AppData): WeekTargets {
   return { gym, run: Math.max(0, days - gym) };
 }
 
-const roundHalf = (km: number) => Math.round(km * 2) / 2;
+// ---------- Gym ----------
 
-/**
- * Reparto de los km pendientes entre las carreras que faltan.
- * Con tirada larga, esta se lleva el 60 % si son 2 carreras y el 40 % si son más; el resto se reparte a partes iguales.
- */
-function runDistances(kmLeft: number, runs: number, withLong: boolean) {
-  if (!runs || !kmLeft) return { long: 0, other: 0 };
-  if (!withLong || runs === 1) return { long: roundHalf(kmLeft / runs), other: roundHalf(kmLeft / runs) };
-  const long = kmLeft * (runs === 2 ? 0.6 : 0.4);
-  return { long: roundHalf(long), other: roundHalf((kmLeft - long) / (runs - 1)) };
+const sameCats = (a: StrengthCategory[], b: StrengthCategory[]) => a.length === b.length && a.every((c) => b.includes(c));
+
+/** Posición de una sesión en la rotación: por sus grupos o, en sesiones antiguas, por su nombre. */
+function splitIndex(split: StrengthCategory[][], w: Workout): number {
+  const cats = w.gym?.categories;
+  if (cats?.length) return split.findIndex((day) => sameCats(day, cats));
+  const name = w.gym?.routineName.trim().toLowerCase();
+  return split.findIndex((day) => splitLabel(day).toLowerCase() === name);
 }
 
-/** Siguiente rutina en la rotación. `proposedBefore`: fechas de gym ya propuestas (aún sin guardar) antes de este día. */
-function nextRoutine(routines: Routine[], workouts: Workout[], beforeDate: string, proposedBefore: string[] = []): Routine | null {
-  if (!routines.length) return null;
-  const lastGym = sortByDate(workouts.filter((w) => w.kind === 'gym' && w.date < beforeDate && w.gym?.routineName), true)[0];
+/** Siguiente día de la rotación. `proposedBefore`: fechas de gym ya propuestas (aún sin guardar) antes de este día. */
+function nextSplitDay(data: AppData, beforeDate: string, proposedBefore: string[] = []): StrengthCategory[] | null {
+  const split = data.settings.gymSplit;
+  if (!split.length) return null;
+  const lastGym = sortByDate(
+    data.workouts.filter((w) => w.kind === 'gym' && w.date < beforeDate && splitIndex(split, w) >= 0),
+    true,
+  )[0];
   // Solo cuentan las propuestas posteriores a la última sesión real.
   const offset = proposedBefore.filter((d) => !lastGym || d > lastGym.date).length;
-  const lastIdx = lastGym
-    ? routines.findIndex((r) => r.name.trim().toLowerCase() === lastGym.gym!.routineName.trim().toLowerCase())
-    : -1;
-  return routines[(lastIdx + 1 + offset) % routines.length];
+  const lastIdx = lastGym ? splitIndex(split, lastGym) : -1;
+  return split[(lastIdx + 1 + offset) % split.length];
 }
 
-function gymWorkout(date: string, routine: Routine | null): Workout {
+/**
+ * Ejercicios de un grupo para una semana: el primero (el principal) siempre; el resto rota.
+ * Se eligen repartidos a lo largo de la lista (no seguidos) para que un grupo mixto como
+ * Espalda + bíceps no salga todo de espalda o todo de bíceps.
+ */
+function pickExercises(data: AppData, cat: StrengthCategory, week: number) {
+  const items = data.library.exercises.filter((e) => e.category === cat);
+  const n = EXERCISES_PER_SESSION[cat];
+  if (items.length <= n) return items;
+  const [anchor, ...rest] = items;
+  const k = n - 1;
+  const step = Math.max(1, Math.floor(rest.length / k));
+  const start = week % rest.length;
+  return [anchor, ...Array.from({ length: k }, (_, i) => rest[(start + i * step) % rest.length])];
+}
+
+function gymWorkout(data: AppData, date: string, cats: StrengthCategory[] | null, lastWeight: (n: string) => number): Workout {
+  const week = weekNumber(date);
+  const exercises = (cats ?? []).flatMap((c) => pickExercises(data, c, week));
   return {
     id: uid(),
     createdAt: Date.now(),
@@ -59,29 +81,66 @@ function gymWorkout(date: string, routine: Routine | null): Workout {
     kind: 'gym',
     status: 'planned',
     gym: {
-      routineName: routine?.name ?? 'Gimnasio',
-      exercises: (routine?.exercises ?? []).map((e) => ({
+      routineName: cats ? splitLabel(cats) : 'Gimnasio',
+      categories: cats ?? undefined,
+      exercises: exercises.map((e) => ({
         name: e.name,
-        sets: Array.from({ length: Math.max(1, e.sets) }, () => ({ reps: e.reps, weight: 0 })),
+        sets: Array.from({ length: Math.max(1, e.sets) }, () => ({ reps: e.reps, weight: lastWeight(e.name) })),
       })),
     },
   };
 }
 
-function runWorkout(date: string, runType: RunType, distanceKm: number): Workout {
-  return { id: uid(), createdAt: Date.now(), date, kind: 'run', status: 'planned', run: { runType, distanceKm, durationSec: 0 } };
+function lastWeightFn(data: AppData) {
+  const history = exerciseHistory(data.workouts);
+  return (name: string) => {
+    const points = history.get(name.trim().toLowerCase())?.points;
+    return points?.length ? points[points.length - 1].topWeight : 0;
+  };
+}
+
+// ---------- Running ----------
+
+/** Siguiente entrenamiento de una categoría: rota según cuántos de ese tipo llevas hechos o planificados. */
+function pickTemplate(data: AppData, cat: RunCategory, beforeDate: string, extra = 0): RunTemplate | null {
+  const items = data.library.runs.filter((r) => r.category === cat);
+  if (!items.length) return null;
+  const used = data.workouts.filter((w) => w.kind === 'run' && w.run?.runType === RUN_CATEGORY_TYPE[cat] && w.date < beforeDate).length;
+  return items[(used + extra) % items.length];
+}
+
+function runWorkout(date: string, cat: RunCategory, t: RunTemplate | null): Workout {
+  return {
+    id: uid(),
+    createdAt: Date.now(),
+    date,
+    kind: 'run',
+    status: 'planned',
+    run: {
+      runType: RUN_CATEGORY_TYPE[cat],
+      distanceKm: t?.distanceKm ?? 0,
+      durationSec: 0,
+      name: t?.name ?? RUN_CATEGORIES[cat],
+      session: t?.session || undefined,
+    },
+  };
+}
+
+/** Orden de las sesiones de calidad: alterna cada semana y deja para el final las que ya hay esta semana. */
+function qualityOrder(week: number, inWeek: Workout[]): RunCategory[] {
+  const base: RunCategory[] = week % 2 === 0 ? ['series', 'fartlek'] : ['fartlek', 'series'];
+  const has = (c: RunCategory) => inWeek.some((w) => w.kind === 'run' && w.run?.runType === RUN_CATEGORY_TYPE[c]);
+  return [...base.filter((c) => !has(c)), ...base.filter(has)];
 }
 
 function weekState(data: AppData, start: string) {
   const end = addDays(start, 6);
   const inWeek = data.workouts.filter((w) => w.date >= start && w.date <= end);
-  const runs = inWeek.filter((w) => w.kind === 'run');
   return {
     inWeek,
     gymCount: inWeek.filter((w) => w.kind === 'gym').length,
-    runCount: runs.length,
-    km: runs.reduce((s, w) => s + (w.run?.distanceKm ?? 0), 0),
-    hasLongRun: runs.some((w) => w.run?.runType === 'tirada'),
+    runCount: inWeek.filter((w) => w.kind === 'run').length,
+    hasLongRun: inWeek.some((w) => w.run?.runType === 'tirada'),
   };
 }
 
@@ -89,7 +148,7 @@ function weekState(data: AppData, start: string) {
 
 /** Propone sesiones para los días de entrenamiento libres de la semana, desde hoy. No modifica nada. */
 export function suggestWeekPlan(data: AppData, start: string, today: string): Workout[] {
-  const { trainDays, weeklyKmGoal } = data.settings;
+  const { trainDays } = data.settings;
   const targets = weekTargets(data);
   const st = weekState(data, start);
   let gymLeft = Math.max(0, targets.gym - st.gymCount);
@@ -116,24 +175,27 @@ export function suggestWeekPlan(data: AppData, start: string, today: string): Wo
     assigned.push({ date: d, kind });
   }
 
-  // Carreras: los km pendientes se reparten entre las carreras que faltan (aunque no todas quepan);
-  // la última es la tirada larga si aún no hay una, y con 3+ carreras una es tempo.
+  // Carreras: la última es la tirada larga si aún no hay una; el resto alterna series y fartlek.
   const newRuns = assigned.filter((a) => a.kind === 'run');
-  const runsNeeded = Math.max(newRuns.length, targets.run - st.runCount);
-  const withLong = newRuns.length >= 2 && !st.hasLongRun;
-  const km = runDistances(Math.max(0, weeklyKmGoal - st.km), runsNeeded, withLong);
+  const week = weekNumber(start);
+  const quality = qualityOrder(week, st.inWeek);
+  const runCats = newRuns.map((_, i): RunCategory =>
+    !st.hasLongRun && i === newRuns.length - 1 ? 'tirada' : quality[i % quality.length],
+  );
 
+  const lastWeight = lastWeightFn(data);
   const proposedGyms: string[] = [];
+  const usedPerCat: Partial<Record<RunCategory, number>> = {};
   return assigned.map((a) => {
     if (a.kind === 'gym') {
-      const w = gymWorkout(a.date, nextRoutine(data.routines, data.workouts, a.date, proposedGyms));
+      const w = gymWorkout(data, a.date, nextSplitDay(data, a.date, proposedGyms), lastWeight);
       proposedGyms.push(a.date);
       return w;
     }
-    const runIdx = newRuns.findIndex((r) => r.date === a.date);
-    const isLong = withLong && runIdx === newRuns.length - 1;
-    const isTempo = !isLong && newRuns.length >= 3 && runIdx === 1;
-    return runWorkout(a.date, isLong ? 'tirada' : isTempo ? 'tempo' : 'rodaje', isLong ? km.long : km.other);
+    const cat = runCats[newRuns.findIndex((r) => r.date === a.date)];
+    const extra = usedPerCat[cat] ?? 0;
+    usedPerCat[cat] = extra + 1;
+    return runWorkout(a.date, cat, pickTemplate(data, cat, a.date, extra));
   });
 }
 
@@ -150,7 +212,7 @@ export function suggestToday(data: AppData, today: string): TodaySuggestion | nu
   // Si hoy ya hay algo planificado o hecho, manda el plan.
   if (data.workouts.some((w) => w.date === today)) return null;
 
-  const { trainDays, weeklyKmGoal } = data.settings;
+  const { trainDays } = data.settings;
   const start = weekStart(today);
   const targets = weekTargets(data);
   const st = weekState(data, start);
@@ -201,17 +263,14 @@ export function suggestToday(data: AppData, today: string): TodaySuggestion | nu
     .join(' ');
 
   if (kind === 'gym') {
-    const routine = nextRoutine(data.routines, data.workouts, today);
-    const workout = gymWorkout(today, routine);
+    const workout = gymWorkout(data, today, nextSplitDay(data, today), lastWeightFn(data));
     return { kind, title: workout.gym!.routineName, reason: why, workout };
   }
 
-  const kmLeft = Math.max(0, weeklyKmGoal - st.km);
   const isWeekend = dow(today) >= 5;
-  const runType: RunType = !st.hasLongRun && (runNeed === 1 || isWeekend) && kmLeft > 0 ? 'tirada' : 'rodaje';
-  // Mismo reparto que el plan semanal: si la tirada aún está por hacer, el rodaje de hoy le deja su parte.
-  const dist = runDistances(kmLeft, runNeed, !st.hasLongRun);
-  const km = kmLeft ? Math.max(3, runType === 'tirada' ? dist.long : dist.other) : 0;
-  const workout = runWorkout(today, runType, km);
-  return { kind, title: `${RUN_TYPES[runType]}${km ? ` · ${formatKm(km)}` : ''}`, reason: why, workout };
+  const cat: RunCategory =
+    !st.hasLongRun && (runNeed === 1 || isWeekend) ? 'tirada' : qualityOrder(weekNumber(today), st.inWeek)[0];
+  const workout = runWorkout(today, cat, pickTemplate(data, cat, today));
+  const km = workout.run!.distanceKm;
+  return { kind, title: `${workout.run!.name}${km ? ` · ${formatKm(km)}` : ''}`, reason: why, workout };
 }

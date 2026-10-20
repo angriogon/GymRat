@@ -23,6 +23,7 @@ export interface RunData {
 export interface GymData {
   routineName: string;
   exercises: ExerciseEntry[];
+  categories?: StrengthCategory[]; // grupos trabajados (para rotar los días de gym)
 }
 
 /** Una sesión, planificada o realizada. Planificar y registrar comparten modelo:
@@ -39,22 +40,11 @@ export interface Workout {
   createdAt: number;
 }
 
-export interface RoutineExercise {
-  name: string;
-  sets: number;
-  reps: number;
-}
-
-export interface Routine {
-  id: string;
-  name: string;
-  exercises: RoutineExercise[];
-}
-
 export interface Settings {
   weeklyKmGoal: number;
   weeklyGymGoal: number;
   trainDays: number[]; // días de entrenamiento: 0 = lunes … 6 = domingo
+  gymSplit: StrengthCategory[][]; // rotación de días de gym, p. ej. [[pecho, tríceps], [espalda-bíceps], …]
 }
 
 // ---------- Biblioteca ----------
@@ -87,7 +77,6 @@ export interface Library {
 export interface AppData {
   version: 1;
   workouts: Workout[];
-  routines: Routine[];
   library: Library;
   settings: Settings;
 }

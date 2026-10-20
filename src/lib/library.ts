@@ -17,6 +17,26 @@ export const RUN_CATEGORIES: Record<RunCategory, string> = {
   series: 'Series',
 };
 
+/** Rotación de días de gym por defecto (3 sesiones semanales, prioridad fuerza). */
+export const DEFAULT_GYM_SPLIT: StrengthCategory[][] = [
+  ['pecho', 'triceps'],
+  ['espalda-biceps', 'abdominales'],
+  ['piernas', 'gluteos', 'propiocepcion'],
+];
+
+/** Ejercicios que se proponen de cada grupo en una sesión. */
+export const EXERCISES_PER_SESSION: Record<StrengthCategory, number> = {
+  pecho: 4,
+  'espalda-biceps': 5,
+  triceps: 3,
+  piernas: 4,
+  abdominales: 3,
+  gluteos: 3,
+  propiocepcion: 3,
+};
+
+export const splitLabel = (cats: StrengthCategory[]) => cats.map((c) => STRENGTH_CATEGORIES[c]).join(' + ');
+
 /** Tipo de carrera que corresponde a cada categoría de la biblioteca. */
 export const RUN_CATEGORY_TYPE: Record<RunCategory, RunType> = {
   tirada: 'tirada',

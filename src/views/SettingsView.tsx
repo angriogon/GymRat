@@ -1,106 +1,14 @@
 import { useRef, useState } from 'react';
-import type { AppData, Routine, RoutineExercise } from '../lib/types';
+import type { AppData, StrengthCategory } from '../lib/types';
 import type { Store } from '../lib/store';
 import { emptyData, parseData } from '../lib/store';
-import { uid } from '../lib/format';
+import { DEFAULT_GYM_SPLIT, STRENGTH_CATEGORIES } from '../lib/library';
 import { today } from '../lib/dates';
 import { weekTargets } from '../lib/recommend';
-import { Sheet } from '../components/Sheet';
 import { Icon } from '../components/Icon';
-
-function RoutineEditor({
-  routine,
-  onSave,
-  onDelete,
-  onClose,
-}: {
-  routine: Routine;
-  onSave: (r: Routine) => void;
-  onDelete?: () => void;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(routine.name);
-  const [rows, setRows] = useState(
-    routine.exercises.map((e) => ({ key: uid(), name: e.name, sets: String(e.sets), reps: String(e.reps) })),
-  );
-  const [error, setError] = useState('');
-
-  const save = () => {
-    if (!name.trim()) return setError('Ponle un nombre a la rutina.');
-    const exercises: RoutineExercise[] = rows
-      .filter((r) => r.name.trim())
-      .map((r) => ({ name: r.name.trim(), sets: Math.max(1, parseInt(r.sets) || 1), reps: Math.max(0, parseInt(r.reps) || 0) }));
-    onSave({ id: routine.id, name: name.trim(), exercises });
-  };
-
-  return (
-    <Sheet
-      title="Rutina"
-      onClose={onClose}
-      footer={
-        <>
-          {onDelete && (
-            <button className="btn ghost danger" onClick={() => confirm('¿Eliminar esta rutina?') && onDelete()}>
-              <Icon name="trash" size={18} /> Eliminar
-            </button>
-          )}
-          <span className="spacer" />
-          <button className="btn ghost" onClick={onClose}>
-            Cancelar
-          </button>
-          <button className="btn primary" onClick={save}>
-            Guardar
-          </button>
-        </>
-      }
-    >
-      <label className="field">
-        <span>Nombre</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Torso, Pierna…" />
-      </label>
-      <div className="routine-rows">
-        <div className="routine-row set-head">
-          <span>Ejercicio</span>
-          <span>Series</span>
-          <span>Reps</span>
-          <span />
-        </div>
-        {rows.map((r) => (
-          <div className="routine-row" key={r.key}>
-            <input
-              value={r.name}
-              placeholder="Ejercicio"
-              onChange={(e) => setRows((l) => l.map((x) => (x.key === r.key ? { ...x, name: e.target.value } : x)))}
-            />
-            <input
-              inputMode="numeric"
-              value={r.sets}
-              aria-label="Series"
-              onChange={(e) => setRows((l) => l.map((x) => (x.key === r.key ? { ...x, sets: e.target.value } : x)))}
-            />
-            <input
-              inputMode="numeric"
-              value={r.reps}
-              aria-label="Repeticiones"
-              onChange={(e) => setRows((l) => l.map((x) => (x.key === r.key ? { ...x, reps: e.target.value } : x)))}
-            />
-            <button className="icon-btn small" aria-label="Quitar" onClick={() => setRows((l) => l.filter((x) => x.key !== r.key))}>
-              <Icon name="x" size={16} />
-            </button>
-          </div>
-        ))}
-      </div>
-      <button className="btn outline full" onClick={() => setRows((l) => [...l, { key: uid(), name: '', sets: '3', reps: '10' }])}>
-        <Icon name="plus" size={18} /> Añadir ejercicio
-      </button>
-      {error && <p className="error">{error}</p>}
-    </Sheet>
-  );
-}
 
 export function SettingsView({ store }: { store: Store }) {
   const { data } = store;
-  const [editing, setEditing] = useState<{ routine: Routine; isNew: boolean } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState('');
 
@@ -129,13 +37,16 @@ export function SettingsView({ store }: { store: Store }) {
     try {
       const parsed = parseData(JSON.parse(await file.text()));
       if (!parsed) throw new Error();
-      if (!confirm(`Se importarán ${parsed.workouts.length} sesiones y ${parsed.routines.length} rutinas. Esto reemplaza los datos actuales. ¿Continuar?`)) return;
+      if (!confirm(`Se importarán ${parsed.workouts.length} sesiones y la biblioteca (${parsed.library.exercises.length} ejercicios, ${parsed.library.runs.length} entrenamientos de running). Esto reemplaza los datos actuales. ¿Continuar?`)) return;
       store.replaceAll(parsed);
       setMsg('Datos importados correctamente.');
     } catch {
       setMsg('El archivo no es una copia de seguridad válida de GymRat.');
     }
   };
+
+  const split = data.settings.gymSplit;
+  const setSplit = (gymSplit: StrengthCategory[][]) => store.updateSettings({ gymSplit });
 
   const setGoal = (key: keyof AppData['settings'], v: string) => {
     const n = parseFloat(v.replace(',', '.'));
@@ -196,22 +107,51 @@ export function SettingsView({ store }: { store: Store }) {
       </section>
 
       <section className="card pad">
-        <h2 className="card-title">Rutinas de gimnasio</h2>
-        <p className="muted small">Plantillas para cargar ejercicios rápidamente al planificar o registrar.</p>
+        <h2 className="card-title">Rotación de días de gym</h2>
+        <p className="muted small">
+          Las sugerencias y el plan semanal van alternando estos días. Los ejercicios salen de la Biblioteca: el principal de cada
+          grupo siempre y el resto rota cada semana.
+        </p>
         <div className="stack">
-          {data.routines.map((r) => (
-            <button key={r.id} className="list-item" onClick={() => setEditing({ routine: r, isNew: false })}>
-              <span>{r.name}</span>
-              <span className="muted small">{r.exercises.length} ejercicios</span>
-            </button>
+          {split.map((day, i) => (
+            <div key={i} className="split-day">
+              <div className="split-day-head">
+                <strong>Día {i + 1}</strong>
+                {split.length > 1 && (
+                  <button className="icon-btn small" aria-label={`Quitar día ${i + 1}`} onClick={() => setSplit(split.filter((_, j) => j !== i))}>
+                    <Icon name="trash" size={16} />
+                  </button>
+                )}
+              </div>
+              <div className="chips">
+                {(Object.keys(STRENGTH_CATEGORIES) as StrengthCategory[]).map((c) => {
+                  const on = day.includes(c);
+                  return (
+                    <button
+                      key={c}
+                      className={`chip small-chip ${on ? 'on' : ''}`}
+                      aria-pressed={on}
+                      onClick={() => {
+                        const next = on ? day.filter((x) => x !== c) : [...day, c];
+                        if (next.length) setSplit(split.map((d, j) => (j === i ? next : d)));
+                      }}
+                    >
+                      {STRENGTH_CATEGORIES[c]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </div>
-        <button
-          className="btn outline full"
-          onClick={() => setEditing({ routine: { id: uid(), name: '', exercises: [{ name: '', sets: 3, reps: 10 }] }, isNew: true })}
-        >
-          <Icon name="plus" size={18} /> Nueva rutina
-        </button>
+        <div className="btn-row">
+          <button className="btn outline" onClick={() => setSplit([...split, ['pecho']])}>
+            <Icon name="plus" size={18} /> Añadir día
+          </button>
+          <button className="btn ghost" onClick={() => confirm('¿Volver a la rotación por defecto?') && setSplit(DEFAULT_GYM_SPLIT)}>
+            Restablecer
+          </button>
+        </div>
       </section>
 
       <section className="card pad">
@@ -250,24 +190,6 @@ export function SettingsView({ store }: { store: Store }) {
 
       <p className="muted small center">GymRat · {data.workouts.length} sesiones guardadas</p>
 
-      {editing && (
-        <RoutineEditor
-          routine={editing.routine}
-          onClose={() => setEditing(null)}
-          onSave={(r) => {
-            store.saveRoutine(r);
-            setEditing(null);
-          }}
-          onDelete={
-            editing.isNew
-              ? undefined
-              : () => {
-                  store.deleteRoutine(editing.routine.id);
-                  setEditing(null);
-                }
-          }
-        />
-      )}
     </div>
   );
 }

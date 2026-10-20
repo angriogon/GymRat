@@ -46,7 +46,6 @@ export default function App() {
 
   const exerciseNames = useMemo(() => {
     const set = new Set<string>();
-    data.routines.forEach((r) => r.exercises.forEach((e) => set.add(e.name)));
     data.library.exercises.forEach((e) => set.add(e.name));
     data.workouts.forEach((w) => w.gym?.exercises.forEach((e) => set.add(e.name)));
     return [...set].filter(Boolean).sort((a, b) => a.localeCompare(b, 'es'));
@@ -98,7 +97,6 @@ export default function App() {
           key={editor.workout.id}
           workout={editor.workout}
           isNew={editor.isNew}
-          routines={data.routines}
           exerciseNames={exerciseNames}
           library={data.library}
           lastWeight={lastWeight}
