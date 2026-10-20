@@ -4,7 +4,6 @@ import { useStore } from './lib/store';
 import { today } from './lib/dates';
 import { Icon, type IconName } from './components/Icon';
 import { WorkoutEditor, newWorkout } from './components/WorkoutEditor';
-import { HealthImport } from './components/HealthImport';
 import { TodayView } from './views/TodayView';
 import { PlanView } from './views/PlanView';
 import { HistoryView } from './views/HistoryView';
@@ -39,7 +38,6 @@ export default function App() {
   const { data } = store;
   const [tab, setTab] = useHashTab();
   const [editor, setEditor] = useState<{ workout: Workout; isNew: boolean } | null>(null);
-  const [importing, setImporting] = useState(false);
 
   useEffect(() => window.scrollTo(0, 0), [tab]);
 
@@ -56,7 +54,7 @@ export default function App() {
   const create = (kind: Kind, date: string) =>
     setEditor({ workout: newWorkout(kind, date, date > today() ? 'planned' : 'done'), isNew: true });
 
-  const viewProps = { data, onOpen: open, onComplete: complete, onNew: create, onImport: () => setImporting(true) };
+  const viewProps = { data, onOpen: open, onComplete: complete, onNew: create };
 
   return (
     <div className="app">
@@ -65,7 +63,7 @@ export default function App() {
         {tab === 'plan' && <PlanView {...viewProps} onSaveMany={(ws) => ws.forEach(store.saveWorkout)} />}
         {tab === 'historial' && <HistoryView data={data} onOpen={open} />}
         {tab === 'progreso' && <ProgressView data={data} />}
-        {tab === 'ajustes' && <SettingsView store={store} onImportHealth={() => setImporting(true)} />}
+        {tab === 'ajustes' && <SettingsView store={store} />}
       </main>
 
       {tab !== 'ajustes' && (
@@ -82,17 +80,6 @@ export default function App() {
           </button>
         ))}
       </nav>
-
-      {importing && (
-        <HealthImport
-          workouts={data.workouts}
-          onClose={() => setImporting(false)}
-          onImport={(ws) => {
-            ws.forEach(store.saveWorkout);
-            setImporting(false);
-          }}
-        />
-      )}
 
       {editor && (
         <WorkoutEditor

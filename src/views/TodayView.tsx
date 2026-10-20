@@ -11,7 +11,6 @@ interface Props {
   onOpen: (w: Workout) => void;
   onComplete: (w: Workout) => void;
   onNew: (kind: Kind, date: string) => void;
-  onImport: () => void;
 }
 
 function Progress({ label, value, goal, text }: { label: string; value: number; goal: number; text: string }) {
@@ -27,7 +26,7 @@ function Progress({ label, value, goal, text }: { label: string; value: number; 
   );
 }
 
-export function TodayView({ data, onOpen, onComplete, onNew, onImport }: Props) {
+export function TodayView({ data, onOpen, onComplete, onNew }: Props) {
   const t = today();
   const week = weekSummary(data.workouts, weekStart(t));
   const { weeklyKmGoal, weeklyGymGoal } = data.settings;
@@ -88,9 +87,6 @@ export function TodayView({ data, onOpen, onComplete, onNew, onImport }: Props) 
             <Icon name="gym" /> Gimnasio
           </button>
         </div>
-        <button className="btn ghost full" onClick={onImport}>
-          <Icon name="heart" size={18} /> Importar de Apple Salud
-        </button>
       </section>
 
       {overdue.length > 0 && (
