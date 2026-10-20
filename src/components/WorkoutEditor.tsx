@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import type { Kind, Routine, RunType, Status, Workout } from '../lib/types';
+import type { Kind, Library, Routine, RunType, Status, Workout } from '../lib/types';
+import { RUN_CATEGORY_TYPE, STRENGTH_CATEGORIES } from '../lib/library';
+import { ExercisePicker, RunPicker } from './LibraryPickers';
 import { RUN_TYPES } from '../lib/types';
 import { formatPace, uid } from '../lib/format';
 import { today } from '../lib/dates';
@@ -21,6 +23,8 @@ interface Props {
   isNew: boolean;
   routines: Routine[];
   exerciseNames: string[];
+  library: Library;
+  lastWeight: (exerciseName: string) => number;
   onSave: (w: Workout) => void;
   onDelete?: (id: string) => void;
   onClose: () => void;
@@ -45,7 +49,7 @@ export function newWorkout(kind: Kind, date = today(), status: Status = 'done'):
   };
 }
 
-export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave, onDelete, onClose }: Props) {
+export function WorkoutEditor({ workout, isNew, routines, exerciseNames, library, lastWeight, onSave, onDelete, onClose }: Props) {
   const [kind, setKind] = useState<Kind>(workout.kind);
   const [status, setStatus] = useState<Status>(workout.status);
   const [date, setDate] = useState(workout.date);
@@ -58,6 +62,9 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
     m: initSec ? String(Math.floor((initSec % 3600) / 60)) : '',
     s: initSec % 60 ? String(initSec % 60) : '',
   });
+  const [runName, setRunName] = useState(workout.run?.name ?? '');
+  const [session, setSession] = useState(workout.run?.session ?? '');
+  const [picker, setPicker] = useState(false);
   const [routineName, setRoutineName] = useState(workout.gym?.routineName ?? '');
   const [exercises, setExercises] = useState<ExerciseForm[]>(
     (workout.gym?.exercises ?? []).map((e) => ({
@@ -93,6 +100,31 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
     );
   };
 
+  const addFromLibrary = (items: Library['exercises'], cats: (keyof typeof STRENGTH_CATEGORIES)[]) => {
+    setExercises((list) => [
+      ...list,
+      ...items.map((e) => {
+        // Precarga el último peso usado en ese ejercicio para no tener que recordarlo.
+        const w = lastWeight(e.name);
+        return {
+          key: uid(),
+          name: e.name,
+          sets: Array.from({ length: Math.max(1, e.sets) }, () => ({ reps: str(e.reps), weight: str(w) })),
+        };
+      }),
+    ]);
+    if (!routineName.trim()) setRoutineName(cats.map((c) => STRENGTH_CATEGORIES[c]).join(' + '));
+    setPicker(false);
+  };
+
+  const pickRun = (t: Library['runs'][number]) => {
+    setRunType(RUN_CATEGORY_TYPE[t.category]);
+    setRunName(t.name);
+    setSession(t.session);
+    if (t.distanceKm) setDistance(String(t.distanceKm).replace('.', ','));
+    setPicker(false);
+  };
+
   const updateEx = (key: string, fn: (e: ExerciseForm) => ExerciseForm) =>
     setExercises((list) => list.map((e) => (e.key === key ? fn(e) : e)));
 
@@ -112,7 +144,13 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
       notes: notes.trim() || undefined,
     };
     if (kind === 'run') {
-      result.run = { runType, distanceKm: num(distance), durationSec: durationSec ?? 0 };
+      result.run = {
+        runType,
+        distanceKm: num(distance),
+        durationSec: durationSec ?? 0,
+        name: runName.trim() || undefined,
+        session: session.trim() || undefined,
+      };
     } else {
       result.gym = {
         routineName: routineName.trim(),
@@ -178,6 +216,13 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
 
       {kind === 'run' ? (
         <>
+          {picker ? (
+            <RunPicker library={library} onPick={pickRun} onCancel={() => setPicker(false)} />
+          ) : (
+            <button className="btn outline full" onClick={() => setPicker(true)}>
+              <Icon name="book" size={18} /> Elegir de la biblioteca
+            </button>
+          )}
           <div className="field">
             <span>Tipo</span>
             <div className="chips">
@@ -228,6 +273,19 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
           <p className="muted small">
             Ritmo: <strong>{pace}</strong>
           </p>
+          <label className="field">
+            <span>Nombre (opcional)</span>
+            <input placeholder="Series 1000 m, Tirada progresiva…" value={runName} onChange={(e) => setRunName(e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Sesión</span>
+            <textarea
+              rows={2}
+              placeholder="6 × 1000 m a ritmo 10K, rec. 2 min…"
+              value={session}
+              onChange={(e) => setSession(e.target.value)}
+            />
+          </label>
         </>
       ) : (
         <>
@@ -340,6 +398,13 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
           >
             <Icon name="plus" size={18} /> Añadir ejercicio
           </button>
+          {picker ? (
+            <ExercisePicker library={library} onAdd={addFromLibrary} onCancel={() => setPicker(false)} />
+          ) : (
+            <button className="btn outline full" onClick={() => setPicker(true)}>
+              <Icon name="book" size={18} /> Añadir de la biblioteca
+            </button>
+          )}
         </>
       )}
 

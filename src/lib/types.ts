@@ -1,6 +1,6 @@
 export type Kind = 'run' | 'gym';
 export type Status = 'planned' | 'done';
-export type RunType = 'rodaje' | 'series' | 'tempo' | 'tirada' | 'competicion';
+export type RunType = 'rodaje' | 'series' | 'fartlek' | 'tempo' | 'tirada' | 'competicion';
 
 export interface SetEntry {
   reps: number;
@@ -16,6 +16,8 @@ export interface RunData {
   runType: RunType;
   distanceKm: number;
   durationSec: number;
+  name?: string; // p. ej. "Series 1000 m" (viene de la biblioteca)
+  session?: string; // estructura de la sesión: "6×1000 m a ritmo 10K, rec. 2'"
 }
 
 export interface GymData {
@@ -55,16 +57,45 @@ export interface Settings {
   trainDays: number[]; // días de entrenamiento: 0 = lunes … 6 = domingo
 }
 
+// ---------- Biblioteca ----------
+
+export type StrengthCategory = 'pecho' | 'espalda-biceps' | 'triceps' | 'piernas' | 'abdominales' | 'gluteos' | 'propiocepcion';
+export type RunCategory = 'tirada' | 'fartlek' | 'series';
+
+export interface LibraryExercise {
+  id: string;
+  name: string;
+  category: StrengthCategory;
+  sets: number;
+  reps: number; // repeticiones, o segundos si el nombre lo indica "(seg)"
+  notes?: string;
+}
+
+export interface RunTemplate {
+  id: string;
+  name: string;
+  category: RunCategory;
+  distanceKm: number;
+  session: string; // descripción de la sesión
+}
+
+export interface Library {
+  exercises: LibraryExercise[];
+  runs: RunTemplate[];
+}
+
 export interface AppData {
   version: 1;
   workouts: Workout[];
   routines: Routine[];
+  library: Library;
   settings: Settings;
 }
 
 export const RUN_TYPES: Record<RunType, string> = {
   rodaje: 'Rodaje',
   series: 'Series',
+  fartlek: 'Fartlek',
   tempo: 'Tempo',
   tirada: 'Tirada larga',
   competicion: 'Competición',

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { AppData, Routine, Settings, Workout } from './types';
+import type { AppData, LibraryExercise, Routine, RunTemplate, Settings, Workout } from './types';
+import { defaultLibrary } from './library';
 import { uid } from './format';
 
 const KEY = 'gymrat:data';
@@ -32,6 +33,7 @@ export function emptyData(): AppData {
     version: 1,
     workouts: [],
     routines: DEFAULT_ROUTINES,
+    library: defaultLibrary(),
     settings: { weeklyKmGoal: 20, weeklyGymGoal: 3, trainDays: [0, 1, 3, 4, 5] },
   };
 }
@@ -53,10 +55,20 @@ export function parseData(raw: unknown): AppData | null {
   const routines = r.routines.filter(
     (x): x is Routine => !!x && typeof x.id === 'string' && typeof x.name === 'string' && Array.isArray(x.exercises),
   );
+  // Datos anteriores a la biblioteca: se crea la biblioteca por defecto.
+  const lib = r.library;
+  const library =
+    lib && Array.isArray(lib.exercises) && Array.isArray(lib.runs)
+      ? {
+          exercises: lib.exercises.filter((x): x is LibraryExercise => !!x && typeof x.id === 'string' && typeof x.name === 'string'),
+          runs: lib.runs.filter((x): x is RunTemplate => !!x && typeof x.id === 'string' && typeof x.name === 'string'),
+        }
+      : base.library;
   return {
     version: 1,
     workouts,
     routines,
+    library,
     settings: { ...base.settings, ...(r.settings ?? {}) },
   };
 }
@@ -78,6 +90,10 @@ export interface Store {
   saveRoutine: (r: Routine) => void;
   deleteRoutine: (id: string) => void;
   updateSettings: (s: Partial<Settings>) => void;
+  saveLibExercise: (e: LibraryExercise) => void;
+  deleteLibExercise: (id: string) => void;
+  saveRunTemplate: (r: RunTemplate) => void;
+  deleteRunTemplate: (id: string) => void;
   replaceAll: (d: AppData) => void;
 }
 
@@ -102,6 +118,19 @@ export function useStore(): Store {
     saveRoutine: useCallback((r) => setData((d) => ({ ...d, routines: upsert(d.routines, r) })), []),
     deleteRoutine: useCallback((id) => setData((d) => ({ ...d, routines: d.routines.filter((r) => r.id !== id) })), []),
     updateSettings: useCallback((s) => setData((d) => ({ ...d, settings: { ...d.settings, ...s } })), []),
+    saveLibExercise: useCallback(
+      (e) => setData((d) => ({ ...d, library: { ...d.library, exercises: upsert(d.library.exercises, e) } })),
+      [],
+    ),
+    deleteLibExercise: useCallback(
+      (id) => setData((d) => ({ ...d, library: { ...d.library, exercises: d.library.exercises.filter((e) => e.id !== id) } })),
+      [],
+    ),
+    saveRunTemplate: useCallback((r) => setData((d) => ({ ...d, library: { ...d.library, runs: upsert(d.library.runs, r) } })), []),
+    deleteRunTemplate: useCallback(
+      (id) => setData((d) => ({ ...d, library: { ...d.library, runs: d.library.runs.filter((r) => r.id !== id) } })),
+      [],
+    ),
     replaceAll: useCallback((d) => setData(d), []),
   };
 }

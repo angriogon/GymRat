@@ -959,3 +959,88 @@ input[aria-invalid='true'] {
   min-width: 40px;
   justify-content: center;
 }
+
+/* ---------- Biblioteca ---------- */
+
+.picker {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg);
+}
+
+.picker-head,
+.picker-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.picker-group-head {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 0;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.check-row span:nth-child(2) {
+  flex: 1;
+}
+
+.check-row input[type='checkbox'] {
+  width: 22px;
+  min-height: 22px;
+  height: 22px;
+  padding: 0;
+  flex: none;
+  -webkit-appearance: auto;
+  appearance: auto;
+  accent-color: var(--gym);
+}
+
+.list-item.tall {
+  padding: 10px 12px;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.list-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.chip-count {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+
+.tabbar button span {
+  white-space: nowrap;
+}

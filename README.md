@@ -19,6 +19,7 @@ Por qué importa: los datos que se guardan desde Safari y los de la app instalad
 - **Plan**: vista semanal (lunes a domingo) para planificar sesiones, navegar entre semanas y copiar la semana anterior como plan.
 - **Registro de running**: tipo (rodaje, series, tempo, tirada larga, competición), distancia, duración, ritmo calculado automáticamente, RPE y notas.
 - **Registro de gimnasio**: ejercicios con series, repeticiones y peso; carga de rutinas plantilla y autocompletado de ejercicios.
+- **Biblioteca**: ejercicios de fuerza por grupos (Pecho, Espalda + bíceps, Tríceps, Piernas, Abdominales, Glúteos y Propiocepción para running, 10+ ejercicios cada uno) y entrenamientos de running (Tiradas largas, Fartlek y Series). Todo editable. Al planificar un día eliges los grupos y marcas ejercicios (con el último peso usado precargado), o eliges una sesión de running que luego puedes ajustar sin modificar la plantilla.
 - **Historial**: sesiones realizadas agrupadas por mes, con filtro por tipo.
 - **Progreso**: km y sesiones de gym por semana (4/8/12 semanas), totales de running, tirada más larga, mejor ritmo y evolución del 1RM estimado por ejercicio.
 - **Ajustes**: objetivos semanales, gestión de rutinas y copia de seguridad en JSON (se exporta con el menú Compartir de iOS: Archivos, iCloud Drive, AirDrop…).

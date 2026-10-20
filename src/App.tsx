@@ -9,11 +9,14 @@ import { PlanView } from './views/PlanView';
 import { HistoryView } from './views/HistoryView';
 import { ProgressView } from './views/ProgressView';
 import { SettingsView } from './views/SettingsView';
+import { LibraryView } from './views/LibraryView';
+import { exerciseHistory } from './lib/stats';
 
 const TABS: { id: string; label: string; icon: IconName }[] = [
   { id: 'hoy', label: 'Hoy', icon: 'home' },
   { id: 'plan', label: 'Plan', icon: 'calendar' },
   { id: 'historial', label: 'Historial', icon: 'list' },
+  { id: 'biblioteca', label: 'Biblioteca', icon: 'book' },
   { id: 'progreso', label: 'Progreso', icon: 'chart' },
   { id: 'ajustes', label: 'Ajustes', icon: 'settings' },
 ];
@@ -44,9 +47,17 @@ export default function App() {
   const exerciseNames = useMemo(() => {
     const set = new Set<string>();
     data.routines.forEach((r) => r.exercises.forEach((e) => set.add(e.name)));
+    data.library.exercises.forEach((e) => set.add(e.name));
     data.workouts.forEach((w) => w.gym?.exercises.forEach((e) => set.add(e.name)));
     return [...set].filter(Boolean).sort((a, b) => a.localeCompare(b, 'es'));
   }, [data]);
+
+  // Último peso usado por ejercicio, para precargarlo al añadir desde la biblioteca.
+  const history = useMemo(() => exerciseHistory(data.workouts), [data.workouts]);
+  const lastWeight = (name: string) => {
+    const points = history.get(name.trim().toLowerCase())?.points;
+    return points?.length ? points[points.length - 1].topWeight : 0;
+  };
 
   const open = (w: Workout) => setEditor({ workout: w, isNew: false });
   const complete = (w: Workout) => setEditor({ workout: { ...w, status: 'done' }, isNew: false });
@@ -62,11 +73,12 @@ export default function App() {
         {tab === 'hoy' && <TodayView {...viewProps} />}
         {tab === 'plan' && <PlanView {...viewProps} onSaveMany={(ws) => ws.forEach(store.saveWorkout)} />}
         {tab === 'historial' && <HistoryView data={data} onOpen={open} />}
+        {tab === 'biblioteca' && <LibraryView store={store} />}
         {tab === 'progreso' && <ProgressView data={data} />}
         {tab === 'ajustes' && <SettingsView store={store} />}
       </main>
 
-      {tab !== 'ajustes' && (
+      {tab !== 'ajustes' && tab !== 'biblioteca' && (
         <button className="fab" onClick={() => create('run', today())} aria-label="Nueva sesión">
           <Icon name="plus" size={26} />
         </button>
@@ -88,6 +100,8 @@ export default function App() {
           isNew={editor.isNew}
           routines={data.routines}
           exerciseNames={exerciseNames}
+          library={data.library}
+          lastWeight={lastWeight}
           onClose={() => setEditor(null)}
           onSave={(w) => {
             store.saveWorkout(w);

@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function workoutTitle(w: Workout): string {
-  if (w.kind === 'run') return w.run ? RUN_TYPES[w.run.runType] : 'Carrera';
+  if (w.kind === 'run') return w.run ? w.run.name?.trim() || RUN_TYPES[w.run.runType] : 'Carrera';
   return w.gym?.routineName?.trim() || 'Gimnasio';
 }
 
