@@ -914,3 +914,69 @@ input[aria-invalid='true'] {
 .install-tip .icon-btn {
   margin: -8px -8px 0 auto;
 }
+
+/* ---------- Importación Apple Salud ---------- */
+
+.import-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.import-row.is-skip {
+  opacity: 0.55;
+}
+
+.import-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.import-row select {
+  width: auto;
+  flex: none;
+  min-height: 38px;
+}
+
+.note {
+  color: var(--run);
+}
+
+.help {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.help summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.help ol {
+  padding-left: 20px;
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.help code {
+  display: block;
+  margin: 6px 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+}

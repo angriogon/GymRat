@@ -97,7 +97,7 @@ function RoutineEditor({
   );
 }
 
-export function SettingsView({ store }: { store: Store }) {
+export function SettingsView({ store, onImportHealth }: { store: Store; onImportHealth: () => void }) {
   const { data } = store;
   const [editing, setEditing] = useState<{ routine: Routine; isNew: boolean } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -178,6 +178,16 @@ export function SettingsView({ store }: { store: Store }) {
           onClick={() => setEditing({ routine: { id: uid(), name: '', exercises: [{ name: '', sets: 3, reps: 10 }] }, isNew: true })}
         >
           <Icon name="plus" size={18} /> Nueva rutina
+        </button>
+      </section>
+
+      <section className="card pad">
+        <h2 className="card-title">Apple Salud</h2>
+        <p className="muted small">
+          Importa las carreras y sesiones de fuerza de tus relojes (Garmin, Redmi Watch…) que llegan a Salud, mediante un atajo de iOS.
+        </p>
+        <button className="btn outline full" onClick={onImportHealth}>
+          Importar de Apple Salud
         </button>
       </section>
 

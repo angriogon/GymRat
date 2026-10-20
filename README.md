@@ -20,6 +20,7 @@ Por qué importa: los datos que se guardan desde Safari y los de la app instalad
 - **Registro de gimnasio**: ejercicios con series, repeticiones y peso; carga de rutinas plantilla y autocompletado de ejercicios.
 - **Historial**: sesiones realizadas agrupadas por mes, con filtro por tipo.
 - **Progreso**: km y sesiones de gym por semana (4/8/12 semanas), totales de running, tirada más larga, mejor ritmo y evolución del 1RM estimado por ejercicio.
+- **Importar de Apple Salud**: trae las carreras y sesiones de fuerza de tus relojes (Garmin, Redmi Watch…) que ya sincronizan con Salud, mediante un atajo de iOS. Vista previa editable, detección de duplicados (misma sesión grabada por dos relojes o reimportada) y completado automático de sesiones planificadas. Las instrucciones para crear el atajo están dentro de la app.
 - **Ajustes**: objetivos semanales, gestión de rutinas y copia de seguridad en JSON (se exporta con el menú Compartir de iOS: Archivos, iCloud Drive, AirDrop…).
 
 Una sesión planificada se completa con un toque (✓): se abre con los objetivos precargados para anotar lo que realmente hiciste.

@@ -27,8 +27,10 @@ export function workoutDetail(w: Workout): string {
   if (w.kind === 'gym' && w.gym) {
     const ex = w.gym.exercises.filter((e) => e.name.trim());
     const sets = ex.reduce((s, e) => s + e.sets.length, 0);
-    if (!ex.length) return 'Sin ejercicios';
-    return `${ex.length} ejercicio${ex.length > 1 ? 's' : ''} · ${sets} series`;
+    const parts: string[] = [];
+    if (w.gym.durationSec) parts.push(formatDuration(w.gym.durationSec));
+    parts.push(ex.length ? `${ex.length} ejercicio${ex.length > 1 ? 's' : ''} · ${sets} series` : 'Sin ejercicios');
+    return parts.join(' · ');
   }
   return '';
 }

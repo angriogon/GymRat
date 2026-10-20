@@ -21,6 +21,7 @@ export interface RunData {
 export interface GymData {
   routineName: string;
   exercises: ExerciseEntry[];
+  durationSec?: number; // llega al importar desde Apple Salud
 }
 
 /** Una sesión, planificada o realizada. Planificar y registrar comparten modelo:
@@ -35,6 +36,10 @@ export interface Workout {
   rpe?: number; // esfuerzo percibido 1-10
   notes?: string;
   createdAt: number;
+  /** Solo en sesiones importadas de Apple Salud: evitan duplicados al reimportar. */
+  externalId?: string;
+  source?: string; // reloj o app de origen
+  startedAt?: string; // ISO con hora
 }
 
 export interface RoutineExercise {

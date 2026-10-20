@@ -110,11 +110,15 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
       status,
       rpe: status === 'done' ? rpe : undefined,
       notes: notes.trim() || undefined,
+      externalId: workout.externalId,
+      source: workout.source,
+      startedAt: workout.startedAt,
     };
     if (kind === 'run') {
       result.run = { runType, distanceKm: num(distance), durationSec: durationSec ?? 0 };
     } else {
       result.gym = {
+        durationSec: workout.gym?.durationSec,
         routineName: routineName.trim(),
         exercises: exercises
           .filter((e) => e.name.trim())
@@ -160,6 +164,10 @@ export function WorkoutEditor({ workout, isNew, routines, exerciseNames, onSave,
             <Icon name="gym" size={18} /> Gimnasio
           </button>
         </div>
+      )}
+
+      {workout.externalId && (
+        <p className="muted small">Importado de Apple Salud{workout.source ? ` · ${workout.source}` : ''}</p>
       )}
 
       <div className="row">
