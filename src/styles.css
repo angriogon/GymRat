@@ -42,6 +42,8 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Sin zoom por doble toque; el desplazamiento sigue funcionando */
+  touch-action: manipulation;
 }
 
 body {

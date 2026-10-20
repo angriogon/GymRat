@@ -9,6 +9,20 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
+// Bloquea el zoom con pellizco. Safari ignora user-scalable=no desde iOS 10,
+// pero respeta preventDefault en sus eventos de gesto propios.
+for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+}
+document.addEventListener(
+  'touchmove',
+  (e) => {
+    const scale = (e as TouchEvent & { scale?: number }).scale; // solo existe en Safari
+    if (scale !== undefined && scale !== 1) e.preventDefault();
+  },
+  { passive: false },
+);
+
 // Pide al navegador que no borre los datos locales al liberar espacio (Safari 17+).
 navigator.storage?.persist?.().catch(() => {});
 
